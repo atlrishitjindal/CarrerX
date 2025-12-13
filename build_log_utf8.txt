@@ -1,0 +1,35 @@
+﻿
+> carrerx@1.0.0 build
+> vite build
+
+node.exe : ΓÜá∩╕Å  WARNING: API_KEY is not defined in the environment variables. AI features will likely fail in 
+production.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\rishi\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ΓÜá∩╕Å  WARNING... in production.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 1705 modules transformed.
+[31mx[39m Build failed in 16.23s
+[31merror during build:
+[31m[vite]: Rollup failed to resolve import "@google/genai" from "C:/Users/rishi/Downloads/carrerx 
+(1)/services/gemini.ts".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rollupOptions.external`[31m
+    at viteWarn 
+(file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65855:17)
+    at onwarn (file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/@vitejs/plugin-react/dist/index.js:90:7)
+    at onRollupWarning 
+(file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65885:5)
+    at onwarn 
+(file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65550:7)
+    at file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/rollup/dist/es/shared/node-entry.js:20975:13
+    at Object.logger [as onLog] 
+(file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/rollup/dist/es/shared/node-entry.js:22848:9)
+    at ModuleLoader.handleInvalidResolvedId 
+(file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/rollup/dist/es/shared/node-entry.js:21592:26)
+    at file:///C:/Users/rishi/Downloads/carrerx%20(1)/node_modules/rollup/dist/es/shared/node-entry.js:21550:26[39m

@@ -1,0 +1,7 @@
+{
+  "name": "CarrerX",
+  "description": "An all-in-one AI career assistant featuring real-time mock interviews, resume analysis, and market insights.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
