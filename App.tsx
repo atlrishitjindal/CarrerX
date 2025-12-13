@@ -23,26 +23,29 @@ import { supabase } from './lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 
 function App() {
-  const [user, setUser] = useState<{name: string, email: string, role: UserRole, id: string, phone?: string, address?: string} | null>(null);
+  const [user, setUser] = useState<{ name: string, email: string, role: UserRole, id: string, phone?: string, address?: string } | null>(null);
   const [viewState, setViewState] = useState<'landing' | 'auth_login' | 'auth_signup' | 'auth_reset' | 'app'>('landing');
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  
+
   // Global State for Shared Data
   const [resumeAnalysis, setResumeAnalysis] = useState<ResumeAnalysis | null>(null);
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
-  
+
   // Shared Job/Recruitment State
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   // Track ownership of applications to prevent employers from overwriting candidate ownership
   const [applicationOwners, setApplicationOwners] = useState<Record<string, string>>({});
 
+  // Navigation Intents
+  const [postJobIntent, setPostJobIntent] = useState(false);
+
   // Initialize Auth Listener & Session Restoration
   useEffect(() => {
     const isRecovery = typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('type=recovery');
-    
+
     if (isRecovery) {
       setViewState('auth_reset');
     }
@@ -53,12 +56,12 @@ function App() {
 
       if (session?.user) {
         setUser({
-            name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            role: (session.user.user_metadata.role as UserRole) || 'candidate',
-            id: session.user.id,
-            phone: session.user.user_metadata.phone,
-            address: session.user.user_metadata.address
+          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          role: (session.user.user_metadata.role as UserRole) || 'candidate',
+          id: session.user.id,
+          phone: session.user.user_metadata.phone,
+          address: session.user.user_metadata.address
         });
         setViewState(prev => prev === 'auth_reset' ? 'auth_reset' : 'app');
       }
@@ -71,17 +74,17 @@ function App() {
       }
 
       if (_event === 'SIGNED_IN' && session?.user && viewState !== 'app') {
-         setUser({
-            name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            role: (session.user.user_metadata.role as UserRole) || 'candidate',
-            id: session.user.id,
-            phone: session.user.user_metadata.phone,
-            address: session.user.user_metadata.address
-         });
-         setViewState('app');
+        setUser({
+          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          role: (session.user.user_metadata.role as UserRole) || 'candidate',
+          id: session.user.id,
+          phone: session.user.user_metadata.phone,
+          address: session.user.user_metadata.address
+        });
+        setViewState('app');
       }
-      
+
       if (_event === 'SIGNED_OUT') {
         setUser(null);
         setViewState('landing');
@@ -99,36 +102,36 @@ function App() {
       try {
         // 1. FETCH RESUMES
         let loadedResumes: SavedResume[] = [];
-        
+
         // Try DB
         const { data: resumesData } = await supabase
           .from('resumes')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
-        
+
         if (resumesData && resumesData.length > 0) {
-           loadedResumes = resumesData
-             .map((row: any) => ({
-               id: row.id,
-               created_at: row.created_at,
-               data: row.data
-             }))
-             .filter((r: SavedResume) => r.data && r.data.score !== undefined); // Filter out corrupt data
+          loadedResumes = resumesData
+            .map((row: any) => ({
+              id: row.id,
+              created_at: row.created_at,
+              data: row.data
+            }))
+            .filter((r: SavedResume) => r.data && r.data.score !== undefined); // Filter out corrupt data
         } else {
-           // Fallback to LocalStorage
-           const localResumes = localStorage.getItem(`carrerx_resumes_${user.id}`);
-           if (localResumes) {
-             const parsed = JSON.parse(localResumes);
-             if (Array.isArray(parsed)) {
-               loadedResumes = parsed.filter((r: any) => r && r.data && r.data.score !== undefined);
-             }
-           }
+          // Fallback to LocalStorage
+          const localResumes = localStorage.getItem(`carrerx_resumes_${user.id}`);
+          if (localResumes) {
+            const parsed = JSON.parse(localResumes);
+            if (Array.isArray(parsed)) {
+              loadedResumes = parsed.filter((r: any) => r && r.data && r.data.score !== undefined);
+            }
+          }
         }
-        
+
         setSavedResumes(loadedResumes);
         if (!resumeAnalysis && loadedResumes.length > 0) {
-             setResumeAnalysis(loadedResumes[0].data);
+          setResumeAnalysis(loadedResumes[0].data);
         }
 
         // 2. FETCH APPLICATIONS
@@ -141,11 +144,11 @@ function App() {
 
         // If global is empty but we have local candidate data, migrate it up (self-healing)
         if (globalApps.length === 0 && user.role === 'candidate') {
-           const localLegacyApps = localStorage.getItem(`carrerx_apps_${user.id}`);
-           if (localLegacyApps) {
-               globalApps = JSON.parse(localLegacyApps);
-               localStorage.setItem('carrerx_global_applications', JSON.stringify(globalApps));
-           }
+          const localLegacyApps = localStorage.getItem(`carrerx_apps_${user.id}`);
+          if (localLegacyApps) {
+            globalApps = JSON.parse(localLegacyApps);
+            localStorage.setItem('carrerx_global_applications', JSON.stringify(globalApps));
+          }
         }
 
         // Also attempt DB fetch to see if we have fresher data there
@@ -156,22 +159,22 @@ function App() {
         }
         const { data: appsData } = await query;
         if (appsData && appsData.length > 0) {
-           dbApps = appsData.map((row: any) => row.data).filter((a: any) => a);
-           // Merge DB apps into globalApps if missing
-           dbApps.forEach(dbApp => {
-               if (!globalApps.find(g => g.id === dbApp.id)) {
-                   globalApps.push(dbApp);
-               }
-           });
+          dbApps = appsData.map((row: any) => row.data).filter((a: any) => a);
+          // Merge DB apps into globalApps if missing
+          dbApps.forEach(dbApp => {
+            if (!globalApps.find(g => g.id === dbApp.id)) {
+              globalApps.push(dbApp);
+            }
+          });
         }
 
         // Filter: Employers see ALL. Candidates see ONLY THEIRS.
         if (user.role === 'employer') {
-            loadedApps = globalApps;
+          loadedApps = globalApps;
         } else {
-            loadedApps = globalApps.filter(app => app.candidateEmail === user.email);
+          loadedApps = globalApps.filter(app => app.candidateEmail === user.email);
         }
-        
+
         // Sort by timestamp descending
         loadedApps.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         setApplications(loadedApps);
@@ -187,13 +190,13 @@ function App() {
         // Merge logic: Start with Global Jobs, add Local Jobs if not already present
         const mergedJobs = [...globalJobs];
         const globalIds = new Set(globalJobs.map(j => j.id));
-        
+
         localJobs.forEach(j => {
-            if (!globalIds.has(j.id)) {
-                mergedJobs.push(j);
-            }
+          if (!globalIds.has(j.id)) {
+            mergedJobs.push(j);
+          }
         });
-        
+
         setJobs(mergedJobs);
 
       } catch (e) {
@@ -202,18 +205,18 @@ function App() {
     };
 
     if (user?.id) {
-        loadUserData();
+      loadUserData();
     }
   }, [user?.id, user?.role]); // Re-run if role changes
 
 
   // Persistence Effects (Save to LocalStorage on Change as Backup)
   useEffect(() => {
-     if (user?.id && jobs.length > 0) {
-       // We save the CURRENT view of jobs to the user's local storage. 
-       // This effectively caches the global jobs for them too, which is fine for this architecture.
-       localStorage.setItem(`carrerx_jobs_${user.id}`, JSON.stringify(jobs));
-     }
+    if (user?.id && jobs.length > 0) {
+      // We save the CURRENT view of jobs to the user's local storage. 
+      // This effectively caches the global jobs for them too, which is fine for this architecture.
+      localStorage.setItem(`carrerx_jobs_${user.id}`, JSON.stringify(jobs));
+    }
   }, [jobs, user?.id]);
 
   useEffect(() => {
@@ -221,18 +224,18 @@ function App() {
       localStorage.setItem(`carrerx_resumes_${user.id}`, JSON.stringify(savedResumes));
     }
   }, [savedResumes, user?.id]);
-  
+
   // Note: We handle application persistence manually in the handlers to ensure Global Sync
 
 
   // Handlers
-  const handleLogin = (u: {name: string, email: string, role: UserRole, id: string, phone?: string, address?: string}) => {
+  const handleLogin = (u: { name: string, email: string, role: UserRole, id: string, phone?: string, address?: string }) => {
     setUser(u);
     setViewState('app');
     if (u.role === 'employer') {
-        setCurrentView(AppView.EMPLOYER_DASHBOARD);
+      setCurrentView(AppView.EMPLOYER_DASHBOARD);
     } else {
-        setCurrentView(AppView.DASHBOARD);
+      setCurrentView(AppView.DASHBOARD);
     }
   };
 
@@ -258,9 +261,9 @@ function App() {
   const addActivity = (title: string, meta: string) => {
     const newActivity: ActivityLog = {
       id: Date.now().toString(),
-      type: title.toLowerCase().includes('resume') ? 'resume' : 
-            title.toLowerCase().includes('interview') ? 'interview' : 
-            title.toLowerCase().includes('job') ? 'job_match' : 
+      type: title.toLowerCase().includes('resume') ? 'resume' :
+        title.toLowerCase().includes('interview') ? 'interview' :
+          title.toLowerCase().includes('job') ? 'job_match' :
             title.toLowerCase().includes('skill') ? 'skills' : 'cover_letter',
       title,
       meta,
@@ -273,28 +276,28 @@ function App() {
     setResumeAnalysis(result);
     setJobs([]); // Clear previous jobs so they can be regenerated for the new resume
     addActivity("Resume Analysis", `Scored ${result.score}/100`);
-    
+
     // Save Resume
     if (user?.id) {
-         const newId = uuidv4();
-         const newEntry: SavedResume = {
-           id: newId,
-           created_at: new Date().toISOString(),
-           data: result
-         };
+      const newId = uuidv4();
+      const newEntry: SavedResume = {
+        id: newId,
+        created_at: new Date().toISOString(),
+        data: result
+      };
 
-         // Optimistic update (triggers LocalStorage save via useEffect)
-         setSavedResumes(prev => [newEntry, ...prev]);
+      // Optimistic update (triggers LocalStorage save via useEffect)
+      setSavedResumes(prev => [newEntry, ...prev]);
 
-         // DB Insert (Fire and forget, with logging)
-         supabase.from('resumes').insert({
-            id: newId,
-            user_id: user.id,
-            data: result,
-            created_at: newEntry.created_at
-         }).then(({ error }) => {
-            if (error) console.warn("DB Save Error (Resume):", error.message);
-         });
+      // DB Insert (Fire and forget, with logging)
+      supabase.from('resumes').insert({
+        id: newId,
+        user_id: user.id,
+        data: result,
+        created_at: newEntry.created_at
+      }).then(({ error }) => {
+        if (error) console.warn("DB Save Error (Resume):", error.message);
+      });
     }
   };
 
@@ -331,15 +334,20 @@ function App() {
 
     // SYNC: DB Update
     if (user?.id) {
-        supabase.from('applications').upsert({
-            id: newApplication.id,
-            user_id: user.id,
-            data: newApplication,
-            updated_at: new Date().toISOString()
-        }).then(({ error }) => {
-            if (error) console.warn("DB Save Error (Application):", error.message);
-        });
+      supabase.from('applications').upsert({
+        id: newApplication.id,
+        user_id: user.id,
+        data: newApplication,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn("DB Save Error (Application):", error.message);
+      });
     }
+  };
+
+  const handlePostJobRequest = () => {
+    setCurrentView(AppView.JOBS);
+    setPostJobIntent(true);
   };
 
   const handlePostJob = (job: Job) => {
@@ -352,69 +360,81 @@ function App() {
     localStorage.setItem('carrerx_global_jobs', JSON.stringify(updatedGlobalJobs));
   };
 
+  const handleUpdateJob = (updatedJob: Job) => {
+    setJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
+    addActivity("Job Updated", updatedJob.title);
+
+    // Sync Global
+    const globalJobs = JSON.parse(localStorage.getItem('carrerx_global_jobs') || '[]');
+    if (globalJobs.some((j: Job) => j.id === updatedJob.id)) {
+      const newGlobal = globalJobs.map((j: Job) => j.id === updatedJob.id ? updatedJob : j);
+      localStorage.setItem('carrerx_global_jobs', JSON.stringify(newGlobal));
+    }
+  };
+
   const handleUpdateApplicationStatus = async (id: string, newStatus: Application['status'], interviewDate?: Date) => {
     // 1. Calculate the updates first
     let updates: Partial<Application> = { status: newStatus };
     let meetingLink = '';
 
     if (newStatus === 'Interview' && interviewDate) {
-        updates.interviewDate = interviewDate;
-        // Generate link if needed, check existing app in state
-        const existingApp = applications.find(a => a.id === id);
-        if (existingApp && !existingApp.meetingLink) {
-            const chars = 'abcdefghijklmnopqrstuvwxyz';
-            const segment = (len: number) => Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-            meetingLink = `https://meet.jit.si/CarrerX-${segment(3)}-${segment(4)}-${segment(3)}`;
-            updates.meetingLink = meetingLink;
-        } else if (existingApp?.meetingLink) {
-            meetingLink = existingApp.meetingLink;
-        }
+      updates.interviewDate = interviewDate;
+      // Generate link if needed, check existing app in state
+      const existingApp = applications.find(a => a.id === id);
+      if (existingApp && !existingApp.meetingLink) {
+        const chars = 'abcdefghijklmnopqrstuvwxyz';
+        const segment = (len: number) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        meetingLink = `https://meet.jit.si/CarrerX-${segment(3)}-${segment(4)}-${segment(3)}`;
+        updates.meetingLink = meetingLink;
+      } else if (existingApp?.meetingLink) {
+        meetingLink = existingApp.meetingLink;
+      }
     }
 
     // 2. Update React State
     setApplications(prev => prev.map(app => {
       if (app.id === id) {
-          return { ...app, ...updates };
+        return { ...app, ...updates };
       }
       return app;
     }));
 
     const appToUpdate = applications.find(a => a.id === id);
     if (appToUpdate && user?.id) {
-        let meta = `Marked ${appToUpdate.candidateName} as ${newStatus}`;
-        if (newStatus === 'Interview' && interviewDate) {
-            meta += ` on ${interviewDate.toLocaleDateString()}`;
-        }
-        addActivity("Application Update", meta);
-        
-        const fullUpdatedApp = { ...appToUpdate, ...updates };
+      let meta = `Marked ${appToUpdate.candidateName} as ${newStatus}`;
+      if (newStatus === 'Interview' && interviewDate) {
+        meta += ` on ${interviewDate.toLocaleDateString()}`;
+      }
+      addActivity("Application Update", meta);
 
-        // SYNC: Global Storage (Demo Mode)
-        const globalApps: Application[] = JSON.parse(localStorage.getItem('carrerx_global_applications') || '[]');
-        const newGlobalApps = globalApps.map(gApp => gApp.id === id ? { ...gApp, ...updates } : gApp);
-        localStorage.setItem('carrerx_global_applications', JSON.stringify(newGlobalApps));
+      const fullUpdatedApp = { ...appToUpdate, ...updates };
 
-        // SYNC: DB Update
-        // Use the original owner ID logic if we tracked it, otherwise assume global visibility handles it locally.
-        const originalOwnerId = applicationOwners[id] || user.id; // Fallback to current user if untracked, but global storage saves the day.
+      // SYNC: Global Storage (Demo Mode)
+      const globalApps: Application[] = JSON.parse(localStorage.getItem('carrerx_global_applications') || '[]');
+      const newGlobalApps = globalApps.map(gApp => gApp.id === id ? { ...gApp, ...updates } : gApp);
+      localStorage.setItem('carrerx_global_applications', JSON.stringify(newGlobalApps));
 
-        supabase.from('applications').upsert({
-            id: id,
-            // Try to preserve original ownership if possible, but for update we mostly care about the 'data' column
-            user_id: originalOwnerId, 
-            data: fullUpdatedApp,
-            updated_at: new Date().toISOString()
-        }).then(({ error }) => {
-            if (error) console.warn("DB Update Error (Application):", error.message);
-        });
+      // SYNC: DB Update
+      // Use the original owner ID logic if we tracked it, otherwise assume global visibility handles it locally.
+      const originalOwnerId = applicationOwners[id] || user.id; // Fallback to current user if untracked, but global storage saves the day.
+
+      supabase.from('applications').upsert({
+        id: id,
+        // Try to preserve original ownership if possible, but for update we mostly care about the 'data' column
+        user_id: originalOwnerId,
+        data: fullUpdatedApp,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn("DB Update Error (Application):", error.message);
+      });
     }
   };
 
   // Render Views
   if (viewState === 'landing') {
     return (
-      <LandingPage 
-        onGetStarted={() => setViewState('auth_signup')} 
+      <LandingPage
+        onGetStarted={() => setViewState('auth_signup')}
         onLogin={() => setViewState('auth_login')}
       />
     );
@@ -422,16 +442,16 @@ function App() {
 
   if (viewState === 'auth_login' || viewState === 'auth_signup') {
     return (
-      <Auth 
+      <Auth
         initialMode={viewState === 'auth_login' ? 'login' : 'signup'}
-        onComplete={handleLogin} 
+        onComplete={handleLogin}
       />
     );
   }
 
   if (viewState === 'auth_reset') {
     return (
-      <ResetPassword 
+      <ResetPassword
         onComplete={handleLogout}
       />
     );
@@ -439,7 +459,7 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      <Sidebar 
+      <Sidebar
         currentView={currentView}
         setCurrentView={setCurrentView}
         isOpen={isSidebarOpen}
@@ -452,10 +472,10 @@ function App() {
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 sticky top-0 z-20">
           <div className="flex items-center gap-3">
-             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
-               {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-             </button>
-             <span className="font-bold text-slate-900 tracking-tight">CarrerX</span>
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <span className="font-bold text-slate-900 tracking-tight">CarrerX</span>
           </div>
         </div>
 
@@ -471,18 +491,19 @@ function App() {
               className="h-full"
             >
               {(currentView === AppView.DASHBOARD || currentView === AppView.EMPLOYER_DASHBOARD) && (
-                 <Dashboard 
-                   user={user!} 
-                   setCurrentView={setCurrentView} 
-                   resumeAnalysis={resumeAnalysis}
-                   activities={activities}
-                   applications={applications}
-                   jobs={jobs}
-                 />
+                <Dashboard
+                  user={user!}
+                  setCurrentView={setCurrentView}
+                  resumeAnalysis={resumeAnalysis}
+                  activities={activities}
+                  applications={applications}
+                  jobs={jobs}
+                  onPostJob={handlePostJobRequest}
+                />
               )}
 
               {currentView === AppView.MY_APPLICATIONS && (
-                <MyApplications 
+                <MyApplications
                   applications={applications}
                   jobs={jobs}
                   userEmail={user?.email || ''}
@@ -490,13 +511,13 @@ function App() {
               )}
 
               {currentView === AppView.INTERVIEW && (
-                <LiveInterview 
-                  resumeAnalysis={resumeAnalysis} 
+                <LiveInterview
+                  resumeAnalysis={resumeAnalysis}
                 />
               )}
-              
+
               {currentView === AppView.RESUME && (
-                <ResumeAnalyzer 
+                <ResumeAnalyzer
                   analysisResult={resumeAnalysis}
                   onAnalysisComplete={handleResumeAnalysisComplete}
                   onActivity={addActivity}
@@ -504,12 +525,12 @@ function App() {
                   onLoadResume={handleLoadSavedResume}
                 />
               )}
-              
+
               {currentView === AppView.INSIGHTS && <MarketInsights />}
-              
+
               {currentView === AppView.JOBS && (
-                <Jobs 
-                  resumeAnalysis={resumeAnalysis} 
+                <Jobs
+                  resumeAnalysis={resumeAnalysis}
                   onActivity={addActivity}
                   jobs={jobs}
                   setJobs={setJobs}
@@ -518,11 +539,14 @@ function App() {
                   userRole={user?.role}
                   applications={applications}
                   onPostJob={handlePostJob}
+                  onUpdateJob={handleUpdateJob}
+                  postJobIntent={postJobIntent}
+                  onClearPostJobIntent={() => setPostJobIntent(false)}
                 />
               )}
 
               {currentView === AppView.APPLICANTS && (
-                <Applicants 
+                <Applicants
                   applications={applications}
                   jobs={jobs}
                   onUpdateStatus={handleUpdateApplicationStatus}
@@ -530,39 +554,39 @@ function App() {
               )}
 
               {currentView === AppView.SHORTLISTED && (
-                <Applicants 
+                <Applicants
                   applications={applications}
                   jobs={jobs}
                   onUpdateStatus={handleUpdateApplicationStatus}
                   showShortlistedOnly={true}
                 />
               )}
-              
+
               {currentView === AppView.COVER_LETTER && (
-                <CoverLetter 
-                  resumeAnalysis={resumeAnalysis} 
+                <CoverLetter
+                  resumeAnalysis={resumeAnalysis}
                   onActivity={addActivity}
                 />
               )}
 
               {currentView === AppView.SKILLS && (
-                <SkillSuggestions 
-                  resumeAnalysis={resumeAnalysis} 
+                <SkillSuggestions
+                  resumeAnalysis={resumeAnalysis}
                   onActivity={addActivity}
                 />
               )}
 
               {currentView === AppView.CALENDAR && (
-                <CalendarView 
+                <CalendarView
                   applications={applications}
                   user={user!}
                 />
               )}
 
               {currentView === AppView.SETTINGS && (
-                <Settings 
-                  user={user!} 
-                  onUpdateProfile={handleUpdateProfile} 
+                <Settings
+                  user={user!}
+                  onUpdateProfile={handleUpdateProfile}
                 />
               )}
             </motion.div>
