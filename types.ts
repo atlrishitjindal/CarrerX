@@ -28,7 +28,9 @@ export interface ResumeFile {
   name: string;
   type: string;
   size: number;
-  data: string; // Base64 string
+  data?: string; // Base64 string (optional now, as we might offload to storage)
+  url?: string;  // Public URL from Supabase Storage
+  storagePath?: string; // Path in bucket
 }
 
 export interface ResumeAnalysis {
@@ -68,6 +70,7 @@ export interface InsightResult {
 
 export interface Job {
   id: string;
+  employerId?: string; // ID of the employer who posted this job
   title: string;
   company: string;
   location: string;
@@ -82,6 +85,9 @@ export interface Application {
   id: string;
   jobId: string;
   jobTitle: string;
+  companyName?: string; // Snapshot of company name
+  location?: string;    // Snapshot of location
+  salary?: string;      // Snapshot of salary
   candidateName: string;
   candidateEmail: string;
   candidatePhone?: string;
