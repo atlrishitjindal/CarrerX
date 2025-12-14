@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Award, Zap, TrendingUp, Lightbulb, ChevronRight, Hash, Clock, File } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Award, Zap, TrendingUp, Lightbulb, ChevronRight, Hash, Clock, File, Download, Trash2 } from 'lucide-react';
 import { analyzeResume, generateImprovementExample } from '../services/gemini';
 import { ResumeAnalysis, SavedResume } from '../types';
 import { Button, Card } from './ui/DesignSystem';
@@ -11,20 +11,22 @@ interface ResumeAnalyzerProps {
   onActivity: (title: string, meta: string) => void;
   savedResumes?: SavedResume[];
   onLoadResume?: (resume: SavedResume) => void;
+  onDeleteResume?: (id: string, storagePath?: string) => void;
 }
 
-const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({ 
-  analysisResult, 
-  onAnalysisComplete, 
-  onActivity, 
-  savedResumes = [], 
-  onLoadResume 
+const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
+  analysisResult,
+  onAnalysisComplete,
+  onActivity,
+  savedResumes = [],
+  onLoadResume,
+  onDeleteResume
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Interactive example state
   const [activeExampleIndex, setActiveExampleIndex] = useState<number | null>(null);
   const [exampleLoading, setExampleLoading] = useState(false);
@@ -48,21 +50,21 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
 
   const handleAnalyze = async () => {
     if (!file || !preview) return;
-    
+
     setIsAnalyzing(true);
     setError(null);
-    
+
     try {
       const base64Data = preview.split(',')[1];
       const analysis = await analyzeResume(base64Data, file.type);
-      
+
       const fullAnalysis: ResumeAnalysis = {
         ...analysis,
         file: {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            data: base64Data
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: base64Data
         }
       };
 
@@ -81,7 +83,7 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
       setActiveExampleIndex(null);
       return;
     }
-    
+
     setActiveExampleIndex(index);
     if (!examples[index]) {
       setExampleLoading(true);
@@ -98,61 +100,96 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full min-h-[calc(100vh-8rem)]">
-      
+
       {/* LEFT SIDEBAR: Saved Resumes */}
       <div className="w-full lg:w-72 flex-none space-y-4">
-         <Card className="h-full bg-white border-slate-200 p-0 overflow-hidden flex flex-col max-h-[600px] lg:max-h-full">
-            <div className="p-4 border-b border-slate-100 bg-slate-50">
-               <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                 <Clock className="w-4 h-4 text-slate-500" />
-                 History
-               </h3>
-            </div>
-            <div className="overflow-y-auto flex-1 p-2 space-y-1">
-               {savedResumes.length === 0 ? (
-                 <div className="p-6 text-center text-slate-500 text-sm">
-                   <p>No uploaded resumes yet.</p>
-                 </div>
-               ) : (
-                 savedResumes.map((resume) => {
-                   if (!resume.data) return null; // Safety check for bad data
-                   return (
-                     <button
-                       key={resume.id}
-                       onClick={() => onLoadResume && onLoadResume(resume)}
-                       className={cn(
-                         "w-full text-left p-3 rounded-lg text-sm transition-all border border-transparent",
-                         analysisResult && analysisResult.summary === resume.data.summary // Simple equality check for active state
-                           ? "bg-brand-50 border-brand-200 text-brand-700" 
-                           : "hover:bg-slate-50 text-slate-700 hover:border-slate-200"
-                       )}
-                     >
-                       <div className="flex items-start gap-3">
-                          <div className="mt-1 w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center text-slate-400 flex-none">
-                             <File className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                             <p className="font-semibold truncate">{resume.data.file?.name || "Resume"}</p>
-                             <p className="text-xs opacity-70 mt-0.5">
-                               {new Date(resume.created_at).toLocaleDateString()}
-                             </p>
-                             <div className="mt-1 flex items-center gap-2">
-                                <span className={cn(
-                                  "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
-                                  resume.data.score > 80 ? "bg-emerald-100 text-emerald-700" :
-                                  resume.data.score > 60 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-                                )}>
-                                  Score: {resume.data.score}
-                                </span>
-                             </div>
-                          </div>
-                       </div>
-                     </button>
-                   );
-                 })
-               )}
-            </div>
-         </Card>
+        <Card className="h-full bg-white border-slate-200 p-0 overflow-hidden flex flex-col max-h-[600px] lg:max-h-full">
+          <div className="p-4 border-b border-slate-100 bg-slate-50">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-500" />
+              History
+            </h3>
+          </div>
+          <div className="overflow-y-auto flex-1 p-2 space-y-1">
+            {savedResumes.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-sm">
+                <p>No uploaded resumes yet.</p>
+              </div>
+            ) : (
+              savedResumes.map((resume) => {
+                if (!resume.data) return null; // Safety check for bad data
+                const isSelected = analysisResult && analysisResult.summary === resume.data.summary;
+
+                return (
+                  <div
+                    key={resume.id}
+                    onClick={() => onLoadResume && onLoadResume(resume)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg text-sm transition-all border cursor-pointer relative group",
+                      isSelected
+                        ? "bg-brand-50 border-brand-200 text-brand-700"
+                        : "border-transparent hover:bg-slate-50 text-slate-700 hover:border-slate-200"
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1 w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center text-slate-400 flex-none">
+                        <File className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate pr-6">{resume.data.file?.name || "Resume"}</p>
+                        <p className="text-xs opacity-70 mt-0.5">
+                          {new Date(resume.created_at).toLocaleDateString()}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                            resume.data.score > 80 ? "bg-emerald-100 text-emerald-700" :
+                              resume.data.score > 60 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                          )}>
+                            Score: {resume.data.score}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Download button for stored files */}
+                      {resume.data.file?.url && (
+                        <a
+                          href={resume.data.file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1.5 bg-white border border-slate-200 rounded-md shadow-sm hover:text-brand-600 hover:border-brand-200"
+                          title="Download Original"
+                        >
+                          <Download className="w-3 h-3" />
+                        </a>
+                      )}
+
+                      {/* Delete Button */}
+                      {onDeleteResume && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Are you sure you want to delete this resume?')) {
+                              onDeleteResume(resume.id, resume.data.file?.storagePath);
+                            }
+                          }}
+                          className="p-1.5 bg-white border border-slate-200 rounded-md shadow-sm hover:text-red-600 hover:border-red-200"
+                          title="Delete Resume"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* MAIN CONTENT */}
@@ -196,7 +233,7 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
                   <Upload className="w-8 h-8" />
                 </div>
               )}
-              
+
               {!preview && (
                 <>
                   <h3 className="text-xl font-semibold text-white">Click to Upload Resume</h3>
@@ -223,34 +260,44 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
                 <p className="font-medium">Reading and Analyzing...</p>
               </div>
             )}
-            
+
             {error && (
-                <div className="mt-6 p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-200 text-sm max-w-lg mx-auto">
-                    <p className="font-bold flex items-center justify-center gap-2 mb-1"><AlertCircle className="w-4 h-4" /> Analysis Failed</p>
-                    <p>{error}</p>
-                </div>
+              <div className="mt-6 p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-200 text-sm max-w-lg mx-auto">
+                <p className="font-bold flex items-center justify-center gap-2 mb-1"><AlertCircle className="w-4 h-4" /> Analysis Failed</p>
+                <p>{error}</p>
+              </div>
             )}
           </div>
         )}
 
         {analysisResult && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            
+
             {/* Action Bar for New Upload */}
-            <div className="flex justify-end">
-               <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                     // Reset state to show upload area
-                     onAnalysisComplete(null as any); 
-                     setFile(null); 
-                     setPreview(null);
-                  }}
-                  className="gap-2"
-               >
-                 <Upload className="w-4 h-4" /> Upload New Version
-               </Button>
+            <div className="flex justify-end gap-2">
+              {analysisResult.file?.url && (
+                <a
+                  href={analysisResult.file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-full px-4 py-1.5 text-xs bg-white text-slate-700 hover:text-brand-700 hover:border-brand-200 border border-slate-200 shadow-sm"
+                >
+                  <Download className="w-3 h-3 mr-2" /> Download Original
+                </a>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Reset state to show upload area
+                  onAnalysisComplete(null as any);
+                  setFile(null);
+                  setPreview(null);
+                }}
+                className="gap-2"
+              >
+                <Upload className="w-4 h-4" /> Upload New Version
+              </Button>
             </div>
 
             {/* Score Card */}
@@ -258,10 +305,10 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
               <div className="flex-none relative w-32 h-32 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
                   <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-800" />
-                  <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" 
-                    strokeDasharray={351.86} 
+                  <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent"
+                    strokeDasharray={351.86}
                     strokeDashoffset={351.86 - (351.86 * analysisResult.score) / 100}
-                    className={`transition-all duration-1000 ease-out ${analysisResult.score > 80 ? 'text-green-500' : analysisResult.score > 60 ? 'text-yellow-500' : 'text-red-500'}`} 
+                    className={`transition-all duration-1000 ease-out ${analysisResult.score > 80 ? 'text-green-500' : analysisResult.score > 60 ? 'text-yellow-500' : 'text-red-500'}`}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
@@ -324,7 +371,7 @@ const ResumeAnalyzer: React.FC<ResumeAnalyzerProps> = ({
                         <span className="flex-none w-1.5 h-1.5 rounded-full bg-brand-500 mt-2" />
                         <span>{item}</span>
                       </div>
-                      
+
                       <button
                         onClick={() => handleShowExample(i, item)}
                         className="ml-5 text-brand-400 text-xs font-semibold flex items-center gap-1 hover:text-brand-300 transition-colors"

@@ -34,13 +34,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
 
     return (
       <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+        {...({
+          variants: containerVariants,
+          initial: "hidden",
+          animate: "visible"
+        } as any)}
         className="max-w-7xl mx-auto space-y-8"
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+        <motion.div {...({ variants: itemVariants } as any)} className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Badge variant="brand" className="bg-purple-50 text-purple-700 border-purple-200">Employer Workspace</Badge>
@@ -95,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content Area */}
-          <motion.div variants={itemVariants} className="lg:col-span-2 space-y-8">
+          <motion.div {...({ variants: itemVariants } as any)} className="lg:col-span-2 space-y-8">
 
             {/* Recent Applicants */}
             <section>
@@ -138,7 +140,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
           </motion.div>
 
           {/* Sidebar Feed */}
-          <motion.div variants={itemVariants} className="space-y-6">
+          <motion.div {...({ variants: itemVariants } as any)} className="space-y-6">
             <section>
               <h3 className="text-lg font-bold text-slate-900 font-display mb-4">Pipeline Activity</h3>
               <Card className="p-0">
@@ -177,13 +179,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      {...({
+        variants: containerVariants,
+        initial: "hidden",
+        animate: "visible"
+      } as any)}
       className="max-w-7xl mx-auto space-y-8"
     >
       {/* Header */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+      <motion.div {...({ variants: itemVariants } as any)} className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 font-display">
             {getGreeting()}, <span className="text-brand-600 capitalize">{user.name}</span>
@@ -235,7 +239,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Content Area */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 space-y-8">
+        <motion.div {...({ variants: itemVariants } as any)} className="lg:col-span-2 space-y-8">
 
           {/* Active Applications Section */}
           <section>
@@ -253,9 +257,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
               ) : (
                 <div className="divide-y divide-slate-100">
                   {myApplications.map((app) => {
-                    // Get company name from jobs if available, otherwise mock it for display
+                    // Prefer snapshotted company name, fallback to lookup, then placeholder
                     const relatedJob = jobs.find(j => j.id === app.jobId);
-                    const companyName = relatedJob?.company || "Tech Corp Inc."; // Fallback if job list was refreshed/cleared
+                    const companyName = app.companyName || relatedJob?.company || "Unknown Company";
 
                     return (
                       <div key={app.id} className="p-5 hover:bg-slate-50 transition-colors">
@@ -335,14 +339,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
                     <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-500">
                       <FileText className="w-5 h-5" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900 group-hover:text-brand-600 transition-colors">Software_Engineer_Resume.pdf</h4>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-slate-900 group-hover:text-brand-600 transition-colors truncate pr-4">
+                        {resumeAnalysis.file?.name || "Uploaded Resume"}
+                      </h4>
                       <p className="text-xs text-slate-500">Last updated today</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-none">
                     <Badge variant={resumeAnalysis.score > 70 ? 'success' : 'warning'}>Score: {resumeAnalysis.score}</Badge>
-                    <Button size="sm" variant="secondary">Edit</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setCurrentView(AppView.RESUME)}>Edit</Button>
                   </div>
                 </div>
               ) : (
@@ -360,7 +366,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
         </motion.div>
 
         {/* Sidebar Activity Feed */}
-        <motion.div variants={itemVariants} className="space-y-6">
+        <motion.div {...({ variants: itemVariants } as any)} className="space-y-6">
           <section>
             <h3 className="text-lg font-bold text-slate-900 font-display mb-4">Recent Activity</h3>
             <Card className="p-0">
@@ -404,7 +410,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, setCurrentView, resumeAnaly
 
 const StatCard = ({ title, value, suffix, icon, desc, variant }: any) => {
   return (
-    <motion.div variants={itemVariants}>
+    <motion.div {...({ variants: itemVariants } as any)}>
       <Card className="p-5 hover:shadow-md transition-all duration-300 border-l-4 border-l-transparent hover:border-l-brand-500">
         <div className="flex items-start justify-between mb-4">
           <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-slate-600">
